@@ -20,9 +20,7 @@ const createElement = (type, props, ...children) => {
   };
 };
 
-const isProperty = (key) => key === "children";
-
-let nextUnitOfWork, wipFiber;
+let nextUnitOfWork, wipFiber, currentRoot;
 
 function render(element, container) {
   nextUnitOfWork = {
@@ -32,6 +30,13 @@ function render(element, container) {
     },
   };
 
+  wipFiber = nextUnitOfWork;
+}
+
+function update() {
+  nextUnitOfWork = {
+    ...currentRoot,
+  };
   wipFiber = nextUnitOfWork;
 }
 
@@ -52,6 +57,7 @@ requestIdleCallback(workLoop);
 
 function commitRoot() {
   commitWork(wipFiber.child);
+  currentRoot = wipFiber;
   wipFiber = null;
 }
 
@@ -117,17 +123,29 @@ function performUnitOfWork(fiber) {
   }
 }
 
+const isEvent = (key) => key.startsWith("on");
+const isProperty = (key) => key !== "children" && !isEvent(key);
+const eventType = (key) => key.substring(2).toLowerCase();
+
 function createDom(fiber) {
   const dom =
     fiber.type === "TEXT_ELEMENT"
       ? document.createTextNode("")
       : document.createElement(fiber.type);
-  Object.keys(fiber.props).forEach((name) => {
-    if (isProperty(name)) return;
-    dom[name] = fiber.props[name];
-  });
+
+  Object.keys(fiber.props)
+    .filter(isProperty)
+    .forEach((key) => {
+      dom[key] = fiber.props[key];
+    });
+
+  Object.keys(fiber.props)
+    .filter(isEvent)
+    .forEach((event) => {
+      dom.addEventListener(eventType(event), fiber.props[event]);
+    });
 
   return dom;
 }
 
-export default { render, createElement };
+export default { render, createElement ,update};
