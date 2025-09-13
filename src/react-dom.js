@@ -1,7 +1,7 @@
-import { render } from "./react.js";
+import React from "./react.js";
 
 export function createRoot(container) {
   return {
-    render: (dom) => render(dom, container),
+    render: (dom) => React.render(dom, container),
   };
 }
