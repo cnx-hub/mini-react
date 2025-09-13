@@ -80,14 +80,35 @@ function performUnitOfWork(fiber) {
   const isFunctionComponent = fiber.type instanceof Function;
 
   if (isFunctionComponent) {
-    fiber.props.children = [fiber.type(fiber.props)];
+    updateFunctionComponent(fiber);
   } else {
-    if (!fiber.dom) {
-      fiber.dom = createDom(fiber);
-    }
+    updateHostComponent(fiber);
   }
 
-  const elements = fiber.props.children;
+  if (fiber.child) return fiber.child;
+  let nextFiber = fiber;
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    } else {
+      nextFiber = nextFiber.parent;
+    }
+  }
+}
+
+function updateFunctionComponent(fiber) {
+  fiber.props.children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function updateHostComponent(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function reconcileChildren(fiber, elements) {
   let index = 0;
 
   let prevSibling = null;
@@ -109,17 +130,6 @@ function performUnitOfWork(fiber) {
     }
     prevSibling = newFiber;
     index++;
-  }
-
-  if (fiber.child) return fiber.child;
-
-  let nextFiber = fiber;
-  while (nextFiber) {
-    if (nextFiber.sibling) {
-      return nextFiber.sibling;
-    } else {
-      nextFiber = nextFiber.parent;
-    }
   }
 }
 
@@ -148,4 +158,4 @@ function createDom(fiber) {
   return dom;
 }
 
-export default { render, createElement ,update};
+export default { render, createElement, update };
