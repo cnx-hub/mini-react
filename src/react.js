@@ -36,6 +36,7 @@ function render(element, container) {
 function update() {
   nextUnitOfWork = {
     ...currentRoot,
+    alternate: currentRoot,
   };
   wipFiber = nextUnitOfWork;
 }
@@ -56,6 +57,8 @@ function workLoop(dealing) {
 requestIdleCallback(workLoop);
 
 function commitRoot() {
+  deletions.forEach(commitWork);
+  deletions = [];
   commitWork(wipFiber.child);
   currentRoot = wipFiber;
   wipFiber = null;
@@ -68,12 +71,27 @@ function commitWork(fiber) {
     parentFiber = parentFiber.parent;
   }
   const parentDom = parentFiber.dom;
-  if (fiber.dom) {
+  if (fiber.effectTag === "DELETION") {
+    commitDeletions(fiber, parentDom);
+    return;
+  }
+  if (fiber.effectTag === "UPDATE") {
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+  }
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom) {
     parentDom.append(fiber.dom);
   }
 
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+function commitDeletions(fiber, parentDom) {
+  if (fiber.dom) {
+    parentDom.removeChild(fiber.dom);
+  } else {
+    commitDeletions(fiber.child, parentDom);
+  }
 }
 
 function performUnitOfWork(fiber) {
@@ -108,20 +126,52 @@ function updateHostComponent(fiber) {
   reconcileChildren(fiber, fiber.props.children);
 }
 
-function reconcileChildren(fiber, elements) {
-  let index = 0;
+let deletions = [];
 
+function reconcileChildren(fiber, elements) {
+  let oldFiber = fiber.alternate && fiber.alternate.child;
+
+  let index = 0;
   let prevSibling = null;
-  while (index < elements.length) {
+  while (index < elements.length || oldFiber) {
     const element = elements[index];
-    const newFiber = {
-      type: element.type,
-      dom: null,
-      child: null,
-      parent: fiber,
-      props: element.props,
-      sibling: null,
-    };
+
+    const sameType = oldFiber && oldFiber.type === element.type;
+
+    let newFiber;
+    // update
+    if (sameType) {
+      newFiber = {
+        type: element.type,
+        dom: oldFiber.dom,
+        parent: fiber,
+        props: element.props,
+        alternate: oldFiber,
+        sibling: null,
+        child: null,
+        effectTag: "UPDATE",
+      };
+    }
+    // create
+    if (element && !sameType) {
+      newFiber = {
+        type: element.type,
+        dom: null,
+        parent: fiber,
+        props: element.props,
+        sibling: null,
+        child: null,
+        effectTag: "PLACEMENT",
+      };
+    }
+
+    // delete
+    if (oldFiber && !sameType) {
+      oldFiber.effectTag = "DELETION";
+      deletions.push(oldFiber);
+    }
+
+    if (oldFiber) oldFiber = oldFiber.sibling;
 
     if (index === 0) {
       fiber.child = newFiber;
@@ -136,6 +186,37 @@ function reconcileChildren(fiber, elements) {
 const isEvent = (key) => key.startsWith("on");
 const isProperty = (key) => key !== "children" && !isEvent(key);
 const eventType = (key) => key.substring(2).toLowerCase();
+const isGone = (prev, next) => (key) => !(key in next);
+const isNew = (prev, next) => (key) => prev[key] !== next[key];
+
+function updateDom(dom, prev, next) {
+  Object.keys(prev)
+    .filter(isProperty)
+    .filter(isGone(prev, next))
+    .forEach((key) => {
+      dom[key] = "";
+    });
+
+  Object.keys(next)
+    .filter(isProperty)
+    .filter(isNew(prev, next))
+    .forEach((key) => {
+      dom[key] = next[key];
+    });
+
+  Object.keys(next)
+    .filter(isEvent)
+    .filter(key => isGone(prev, next)(key) || isNew(prev, next)(key))
+    .forEach((event) => {
+      dom.removeEventListener(eventType(event), prev[event]);
+    });
+
+  Object.keys(next)
+    .filter(isEvent)
+    .forEach((event) => {
+      dom.addEventListener(eventType(event), next[event]);
+    });
+}
 
 function createDom(fiber) {
   const dom =
@@ -143,17 +224,7 @@ function createDom(fiber) {
       ? document.createTextNode("")
       : document.createElement(fiber.type);
 
-  Object.keys(fiber.props)
-    .filter(isProperty)
-    .forEach((key) => {
-      dom[key] = fiber.props[key];
-    });
-
-  Object.keys(fiber.props)
-    .filter(isEvent)
-    .forEach((event) => {
-      dom.addEventListener(eventType(event), fiber.props[event]);
-    });
+  updateDom(dom, {}, fiber.props);
 
   return dom;
 }
