@@ -1,9 +1,8 @@
-import React from "./react";
-
-let a = 1;
+import React, { useState } from "./react";
 
 function H3() {
-  return <h3>h3</h3>;
+  const [value, setValue] = useState(0);
+  return <h3>h3 -- {value}</h3>;
 }
 
 function H4() {
@@ -11,18 +10,20 @@ function H4() {
 }
 
 const App = function (props) {
+  const [count, setCount] = useState(0);
+
   const onClick = () => {
-    a++;
-    React.update();
+    // setCount((count) => count + 1);
+    setCount(3);
   };
 
   return (
     <div>
       <button id="app" onClick={onClick}>
-        houdunren -- {a}
+        houdunren -- {count}
       </button>
-      {a % 2 === 0 ? <div>偶数</div> : <div>奇数</div>}
-      {/* <H3 /> */}
+      {count % 2 === 0 ? <div>偶数</div> : <div>奇数</div>}
+      <H3 />
       {/* {a % 2 === 0 ? <H3 /> : <H4 />} */}
       {/* {a % 2 === 0 ? <H3 /> : <H4 />} */}
     </div>
