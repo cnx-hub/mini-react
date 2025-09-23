@@ -159,7 +159,7 @@ export function useEffect(callback, deps) {
 
 function commitEffect(fiber) {
   if (!fiber) return;
-  fiber.effects.forEach((effect, index) => {
+  fiber?.effects?.forEach((effect, index) => {
     if (!fiber.alternate) {
       effect.callback();
     } else {
@@ -171,6 +171,8 @@ function commitEffect(fiber) {
       }
     }
   });
+  commitEffect(fiber.child);
+  commitEffect(fiber.sibling)
 }
 
 function updateHostComponent(fiber) {

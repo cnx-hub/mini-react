@@ -2,8 +2,13 @@ import React, { useState, useEffect } from "./react";
 
 function H3() {
   const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    console.log("useEffect H3....");
+  }, [value]);
   return (
     <div>
+      <button onClick={() => setValue(pre => pre + 1)}>h3 btn</button>
       <h3>h3 -- {value}</h3>
       <H4 />
     </div>
