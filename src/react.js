@@ -76,7 +76,7 @@ function commitWork(fiber) {
     commitDeletions(fiber, parentDom);
     return;
   }
-  if (fiber.effectTag === "UPDATE") {
+  if (fiber.effectTag === "UPDATE" && fiber.dom) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   }
   if (fiber.effectTag === "PLACEMENT" && fiber.dom) {
@@ -152,6 +152,7 @@ export function useEffect(callback, deps) {
   const effect = {
     callback,
     deps,
+    clear: null,
   };
 
   wipFiber.effects.push(effect);
@@ -161,18 +162,20 @@ function commitEffect(fiber) {
   if (!fiber) return;
   fiber?.effects?.forEach((effect, index) => {
     if (!fiber.alternate) {
-      effect.callback();
+      effect.clear = effect.callback();
     } else {
       const deps = effect?.deps;
       const oldDeps = fiber.alternate.effects[index]?.deps;
-
+      if (deps.some((dep, index) => dep !== oldDeps[index])) {
+        fiber.alternate.effects[index]?.clear?.();
+      }
       if (!deps || deps.some((dep, index) => dep !== oldDeps[index])) {
-        effect.callback();
+        effect.clear = effect.callback();
       }
     }
   });
   commitEffect(fiber.child);
-  commitEffect(fiber.sibling)
+  commitEffect(fiber.sibling);
 }
 
 function updateHostComponent(fiber) {

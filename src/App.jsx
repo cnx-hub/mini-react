@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "./react";
 
-function H3() {
-  const [value, setValue] = useState(0);
+function H3({ value }) {
+  // const [value, setValue] = useState(0);
 
-  useEffect(() => {
-    console.log("useEffect H3....");
-  }, [value]);
+  // useEffect(() => {
+  //   console.log("useEffect H3....");
+  // }, [value]);
   return (
     <div>
-      <button onClick={() => setValue(pre => pre + 1)}>h3 btn</button>
+      {/* <button onClick={() => setValue(pre => pre + 1)}>h3 btn</button> */}
       <h3>h3 -- {value}</h3>
       <H4 />
     </div>
@@ -28,11 +28,17 @@ const App = function (props) {
   };
 
   useEffect(() => {
-    console.log("useEffect1....");
-  }, []);
+    // console.log("useEffect1....");
+    return () => {
+      console.log("clear --- 1");
+    };
+  }, [123]);
 
   useEffect(() => {
-    console.log("useEffect2....");
+    // console.log("useEffect2....");
+    return () => {
+      console.log("clear --- ", count);
+    };
   }, [count]);
 
   return (
@@ -41,7 +47,7 @@ const App = function (props) {
         houdunren -- {count}
       </button>
       {count % 2 === 0 ? <div>偶数</div> : <div>奇数</div>}
-      <H3 />
+      <H3 value={count} />
       {/* {a % 2 === 0 ? <H3 /> : <H4 />} */}
       {/* {a % 2 === 0 ? <H3 /> : <H4 />} */}
     </div>
