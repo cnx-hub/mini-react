@@ -23,7 +23,11 @@ const App = function (props) {
   };
 
   useEffect(() => {
-    console.log("useEffect....");
+    console.log("useEffect1....");
+  }, []);
+
+  useEffect(() => {
+    console.log("useEffect2....");
   }, [count]);
 
   return (

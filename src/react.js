@@ -119,6 +119,7 @@ function updateFunctionComponent(fiber) {
   wipFiber = fiber;
   wipFiber.hooks = [];
   wipFiber.hookIndex = 0;
+  wipFiber.effects = [];
   fiber.props.children = [fiber.type(fiber.props)];
   reconcileChildren(fiber, fiber.props.children);
 }
@@ -148,24 +149,28 @@ export function useState(initValue) {
 }
 
 export function useEffect(callback, deps) {
-  wipFiber.effect = {
+  const effect = {
     callback,
     deps,
   };
+
+  wipFiber.effects.push(effect);
 }
 
 function commitEffect(fiber) {
   if (!fiber) return;
-  if (!fiber.alternate) {
-    fiber.effect.callback();
-  } else {
-    const deps = fiber.effect?.deps;
-    const oldDeps = fiber.alternate && fiber.alternate.effect?.deps;
+  fiber.effects.forEach((effect, index) => {
+    if (!fiber.alternate) {
+      effect.callback();
+    } else {
+      const deps = effect?.deps;
+      const oldDeps = fiber.alternate.effects[index]?.deps;
 
-    if (!deps || deps.some((dep, index) => dep !== oldDeps[index])) {
-      fiber.effect.callback();
+      if (!deps || deps.some((dep, index) => dep !== oldDeps[index])) {
+        effect.callback();
+      }
     }
-  }
+  });
 }
 
 function updateHostComponent(fiber) {
