@@ -60,6 +60,7 @@ function commitRoot() {
   deletions.forEach(commitWork);
   deletions = [];
   commitWork(wipRoot.child);
+  commitEffect(wipRoot.child);
   currentRoot = wipRoot;
   wipRoot = null;
 }
@@ -96,7 +97,6 @@ function commitDeletions(fiber, parentDom) {
 
 function performUnitOfWork(fiber) {
   const isFunctionComponent = fiber.type instanceof Function;
-
   if (isFunctionComponent) {
     updateFunctionComponent(fiber);
   } else {
@@ -145,6 +145,27 @@ export function useState(initValue) {
   wipFiber.hooks.push(hook);
   wipFiber.hookIndex++;
   return [hook.state, setValue];
+}
+
+export function useEffect(callback, deps) {
+  wipFiber.effect = {
+    callback,
+    deps,
+  };
+}
+
+function commitEffect(fiber) {
+  if (!fiber) return;
+  if (!fiber.alternate) {
+    fiber.effect.callback();
+  } else {
+    const deps = fiber.effect?.deps;
+    const oldDeps = fiber.alternate && fiber.alternate.effect?.deps;
+
+    if (!deps || deps.some((dep, index) => dep !== oldDeps[index])) {
+      fiber.effect.callback();
+    }
+  }
 }
 
 function updateHostComponent(fiber) {

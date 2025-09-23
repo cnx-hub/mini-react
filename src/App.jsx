@@ -1,8 +1,13 @@
-import React, { useState } from "./react";
+import React, { useState, useEffect } from "./react";
 
 function H3() {
   const [value, setValue] = useState(0);
-  return <h3>h3 -- {value}</h3>;
+  return (
+    <div>
+      <h3>h3 -- {value}</h3>
+      <H4 />
+    </div>
+  );
 }
 
 function H4() {
@@ -13,9 +18,13 @@ const App = function (props) {
   const [count, setCount] = useState(0);
 
   const onClick = () => {
-    // setCount((count) => count + 1);
-    setCount(3);
+    setCount((count) => count + 1);
+    // setCount(3);
   };
+
+  useEffect(() => {
+    console.log("useEffect....");
+  }, [count]);
 
   return (
     <div>
